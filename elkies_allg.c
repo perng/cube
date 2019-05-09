@@ -42,8 +42,8 @@ WWW     http://www.uni-math.gwdg.de/jahnel
 #include<math.h>
 #include"festkomma.h"
 
-#define        seeking_wide         1.0e14
-#define        UNDERCARRIAGE     1.0e11
+double        seeking_wide  =     1.0E14;
+#define        UNDERCARRIAGE     1.0E11
 
 /* Tripel mit |x**3 + y**3 - z**3| < EDITION_BARRIER werden ausgegeben. */
 #define        EDITION_BARRIER  1000
@@ -100,7 +100,7 @@ void out () {
  fp = fopen (file, "a");
  fprintf (fp, "%6ld \t ", row);
  row++;
- fprintf (fp, ausg);
+ fprintf (fp, "%s", ausg);
  fclose (fp);
 }
 
@@ -142,7 +142,7 @@ inline long matrix_prod (long pr[3][3],
 
 /* Copying. Needed in the event that pr to the address of m1 or m2
     should be written.*/
-void berechne_fliesenformat (mpx_t increment) {
+void calculate_tile (mpx_t increment) {
  double  x, zweite_abl, additional_summand;
  long                              fl;
 
@@ -860,21 +860,21 @@ inline long kleine_vect (double lf[3][3], long v[3][3]) {
  /* Calculate the barriers for z. */
  z_schranken (&z_anf, &z_end, p1, p2, p3, p4);
 
- /* Berechne die acht Kanten der Pyramide. */
+ /* Calculate the eight edges of the pyramid. */
  pyr_kanten (kant, p1, p2, p3, p4);
 
- /* Dreifachloop durch die Pyramide. */
+ /* Triple loop through the pyramid. */
  anz = 0;
  v00 = v[0][0]; v01 = v[0][1]; v02 = v[0][2];
- /* Differenzenschema, erster Teil.
- ddd ist unabhaengig von z, ueber die gesamte Fliese konstant. */
+ /* Difference scheme, first part.
+  ddd is constant regardless of z, over the entire tile. */
  ddd =  ((ulong) 6) *
        (((ulong) v02) * ((ulong) v02) * ((ulong) v02)
        -((ulong) v00) * ((ulong) v00) * ((ulong) v00)
        -((ulong) v01) * ((ulong) v01) * ((ulong) v01));
 
  for (z = z_anf; z <= z_end; z++) {
-  /* Berechne die Schranken fuer x und y. */
+  /* Compute the bounds for x and y. */
   x_und_y_schranken (&x_anf, &x_end, &y_anf, &y_end, kant, z);
   XY_SCHLEIFE;
  }
@@ -882,21 +882,21 @@ inline long kleine_vect (double lf[3][3], long v[3][3]) {
 }
 
 
-/* Init. Die aeuszere Schleife. */
-void rechne_intervall (mpx_t x_0_anf, mpx_t x_0_ende) {
+/* Init. The outer loop. */
+void calculate_interval (mpx_t x_0_anf, mpx_t x_0_ende) {
  mpx_t         increment;
  mpx_t                  y_0;
  double  lf[3][3], ln[3][3];
  long      e[3][3], v[3][3];
- long     zaehler, anz, err;
+ long     counter, anz, err;
 
  x_0[0] = x_0_ende[0]; x_0[1] = x_0_ende[1];
- /* Laufen rueckwaerts von x_0_ende nach x_0_anf. */
+ /* Run backwards from x_0_end to x_0_anf. */
 
- berechne_fliesenformat (increment);
+ calculate_tile (increment);
 
- /* Erster Schleifendurchlauf. Hier rechnen wir LLL mit viel Precision.
-    Auszerdem wird y_0 initialisiert. */
+ /* First loop pass. Here we calculate LLL with a lot of precision.
+     In addition, y_0 is initialized.*/
  init (v, y_0, x_0,
            half_step, tiles_offset, half_tile_width, seeking_wide);
  y_inv_init (y_0);
@@ -904,8 +904,8 @@ void rechne_intervall (mpx_t x_0_anf, mpx_t x_0_ende) {
  /* y_diff = y_inv_diff = 0. */
  sprintf (ausg, "Init fertig.\n"); out ();
 
- /* Scheife. Hier reicht fuer fast alles die Genauigkeit von double. */
- zaehler = NEW_TILE; tile = -NEW_TILE; err = 0;
+ /* Loop. Here is enough for almost everything the accuracy of double. */
+ counter = NEW_TILE; tile = -NEW_TILE; err = 0;
  /* while (x_0 >= x_0_anf) ... . */
  while ((x_0[1] > x_0_anf[1]) ||
        ((x_0[1] == x_0_anf[1]) && (x_0[0] >= x_0_anf[0]))) {
@@ -913,52 +913,52 @@ void rechne_intervall (mpx_t x_0_anf, mpx_t x_0_ende) {
   gmp_sprintf (ausg, "\nx_0 = %.*Ff.\n", 40, tmp1); out (); */
 
   berechne_y_wert (y_0);
-  /* Beim ersten Mal ist y_diff = 0 => y_0 wird richtig ausgerechnet. */
+  /* The first time y_diff = 0 => y_0 is calculated correctly. */
   /* mpf_set_mpx (tmp1, y_0);
   gmp_sprintf (ausg, "y_0 = %.*Ff.\n\n", 40, tmp1); out (); */
   berechne_y_strich (y_0);
-  /* Beim ersten Mal ist y_inv_diff = 0 => y'(x_0) wird richtig ausgerechnet. */
+  /* The first time y_inv_diff = 0 => x'(x_0) is calculated correctly. */
   /* mpf_set_mpx (tmp1, Ax);
   gmp_sprintf (ausg, "A = %.*Ff.\n\n", 40, tmp1); out (); */
 
-  if (zaehler == NEW_TILE) {
-   zaehler = 0; tile += NEW_TILE;
-   berechne_fliesenformat (increment);
+  if (counter == NEW_TILE) {
+   counter = 0; tile += NEW_TILE;
+   calculate_tile (increment);
    y_inv_init (y_0); y_diff_init (y_0, increment);
   }
 
-  /* Letztes v war nicht korrekt wegen Overflow. */
+  /* Last v was not correct due to overflow. */
   if (err > 0) {
    init (v, y_0, x_0,
            half_step, tiles_offset, half_tile_width, seeking_wide);
    mpf_set_mpx (tmp1, x_0);
-   gmp_sprintf (ausg, "Neustart bei x_0 = %.*Ff.\n", 25, tmp1); out ();
+   gmp_sprintf (ausg, "Restart at x_0 = %.*Ff.\n", 25, tmp1); out ();
   }
 
   calculate_three_linearf (lf, v, y_0, half_tile_width, seeking_wide);
 
   lll (lf, e);
-  err = matrix_prod (v, e, v); /* v ist auf jeden Fall richtig modulo 2**64. */
+  err = matrix_prod (v, e, v); /* v is definitely modulo 2**64. */
  
   lf_neu (ln, lf, e);
   anz = kleine_vect (ln, v);
-  /* sprintf (ausg, "Finden %ld Gitterpunkte.\n", anz); out (); */
+  /* sprintf (ausg, "Find %ld grid points.\n", anz); out (); */
 
-  /* tile gehen von x_0 nach rechts und links. */
-  mpx_sub (x_0, x_0, increment); zaehler++;
+  /* tile go from x_0 to right and left. */
+  mpx_sub (x_0, x_0, increment); counter++;
  }
 
- sprintf (ausg, "Insgesamt %ld tile behandelt.\n", tile + zaehler);
+ sprintf (ausg, "Insgesamt %ld tile behandelt.\n", tile + counter);
  out ();
 }
 
 
-/* Wir wollen mit etwas wie
-      elkies_allg 0.4 0.000001
-   starten.
+/* We want with something like
+       elkies_allg 0.4 0.000001
+    start.
 
-   Dabei ist 0.4 der Anfangswert.
-   0.000001 ist die Intervalllaenge, die der Prozessor schaffen soll. */
+    Where 0.4 is the initial value.
+    0.000001 is the interval length that the processor should create. */
 int main (int argc, char *argv[]) {
  mpx_t   diff, x_0_anf, x_0_ende;
 
@@ -971,16 +971,16 @@ int main (int argc, char *argv[]) {
  row = 1;
  mpx_add (x_0_ende, x_0_anf, diff);
 
- /* Name der Ausgabedatei */
+ /* Name of the output file */
  mpf_set_mpx (tmp1, x_0_anf); mpf_set_mpx (tmp2, x_0_ende);
  gmp_sprintf (file, "liste_allg_%.*Ff_%.*Ff.txt", 8, tmp1, 8, tmp2);
 
- /* Erste Ausgabe */
- gmp_sprintf (ausg, "Starte Rechnung von %.*Ff bis %.*Ff.\n",
+ /* First edition */
+ gmp_sprintf (ausg, "Start  from %.*Ff bis %.*Ff.\n",
                                                       15, tmp1, 15, tmp2);
  out ();
 
- rechne_intervall (x_0_anf, x_0_ende);
+ calculate_interval (x_0_anf, x_0_ende);
 
  mpf_clear (tmp1); mpf_clear (tmp2);
  return 0;
