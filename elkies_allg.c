@@ -962,6 +962,9 @@ void calculate_interval (mpx_t x_0_anf, mpx_t x_0_ende) {
 int main (int argc, char *argv[]) {
  mpx_t   diff, x_0_anf, x_0_ende;
 
+ // mpf_set_default_prec: Set the default precision to be at least prec bits. 
+ // All subsequent calls to mpf_init will use this precision, but previously 
+ // initialized variables are unaffected.
  mpf_set_default_prec (128);
  mpf_init (tmp1); mpf_init (tmp2);
 
